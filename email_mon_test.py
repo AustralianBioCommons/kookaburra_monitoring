@@ -3,7 +3,6 @@ import email
 import getpass
 from datetime import date
 from email.header import decode_header
-from linecache import getline
 
 # Assign variables for IMAP values
 imap_host = 'mail-server.pawsey.org.au'
