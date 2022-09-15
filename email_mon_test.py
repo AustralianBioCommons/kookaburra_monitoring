@@ -23,7 +23,8 @@ imap.select('Inbox')
 tmp, messages = imap.search(None, 'ALL', 'HEADER Subject "Nextflow Tower Sign in"')
 
 # Fetch the messages by its ID
-# Then print the date and time of all messages with the above header 
+# Then get the date and time of all messages with the above header 
+# Finally only print True if today's date matches any of the messages with the above header
 for num in messages[0].split():
     tmp, data = imap.fetch(num, '(RFC822)')
     for response in data:
