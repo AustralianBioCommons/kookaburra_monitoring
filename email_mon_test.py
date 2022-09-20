@@ -6,7 +6,7 @@ from email.header import decode_header
 
 # Assign variables for IMAP values
 imap_host = 'mail-server.pawsey.org.au'
-imap_user = 'kookaburra-mon'
+imap_user = 'kookaburramon'
 imap_pass =  getpass.getpass()
 imap = imaplib.IMAP4_SSL(imap_host)
 
