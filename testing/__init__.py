@@ -7,6 +7,7 @@ from datetime import date
 from email.header import decode_header
 from typing import Optional
 import traceback
+from time import sleep
 
 def check_email() -> Optional[str]:
     """
@@ -16,6 +17,7 @@ def check_email() -> Optional[str]:
 
     :return: None or url
     """
+
     imap_host = 'mail-server.pawsey.org.au'
     imap_user = 'kookaburramon'
     imap_pass = open('external/password').readline().strip()
@@ -58,6 +60,7 @@ def test_login():
         #Step 1
         browser = Firefox()
         browser.get(f"https://tower.services.biocommons.org.au")
+        sleep(3)
         email_box = browser.find_element(By.ID,"email")
         email_box.send_keys("kookaburramon@pawsey.org.au")
         submit_button = browser.find_element(By.CSS_SELECTOR,"button.btn-signin")
