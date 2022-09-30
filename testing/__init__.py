@@ -8,6 +8,8 @@ from email.header import decode_header
 from typing import Optional
 import traceback
 from time import sleep
+import sys
+from datetime import datetime
 
 def check_email() -> Optional[str]:
     """
@@ -34,18 +36,27 @@ def check_email() -> Optional[str]:
 
     # Put into a variable the list of messages with the header subject "Nextflow Tower Sign in"
     tmp, messages = imap.search(None, 'ALL', 'HEADER Subject "Nextflow Tower Sign in"')
-
     # Fetch the messages by its ID
     # Then get the date and time of all messages with the above header
     # Finally only print True if today's date matches any of the messages with the above header
+
+    # Create an empty list to hold emails
+    recent_received_emails = []
     for num in messages[0].split():
         tmp, data = imap.fetch(num, '(RFC822)')
         for response in data:
             if isinstance(response, tuple):
                 msg = email.message_from_bytes(response[1])
                 dates = decode_header(msg["Date"])[0][0]
+                current_time = datetime.now()
+                # TODO - check if we need %d or %-d - see https://www.programiz.com/python-programming/datetime/strptime
+                a = datetime.strptime(dates, '%a, %d %b %Y %H:%M:%S %z (%Z)')
+                # TODO - compare a to current_time
+
                 if today_as_str in dates:
-                    print("True")
+                    recent_received_emails.append(data)
+
+    print(recent_received_emails[-1])
 
 
 def test_login():
@@ -77,3 +88,6 @@ def test_login():
         stack_trace = traceback.format_exc()
 
         pass
+
+#test_login()
+check_email()
