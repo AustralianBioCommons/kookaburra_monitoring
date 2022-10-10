@@ -13,7 +13,8 @@ import re
 import sys
 from email import message_from_bytes
 from email.policy import default
-
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
 def check_email() -> Optional[str]:
     """
     This function checks the email folder and returns the
@@ -30,7 +31,6 @@ def check_email() -> Optional[str]:
 
     # Assign variable for today's date
     today_as_str = date.today().strftime("%-d %b %Y")
-    print(today_as_str)
 
     # Log in to server
     imap.login(imap_user, imap_pass)
@@ -72,7 +72,6 @@ def check_email() -> Optional[str]:
                         print("Something weird has happened with the email received")
                         return None
                     recent_received_emails.append(body)
-                    recent_received_emails.append(body)
 
     # Check if list is empty
     if recent_received_emails:
@@ -86,47 +85,91 @@ def check_email() -> Optional[str]:
             domain = urlparse(url).netloc
             # If it's Tower (therefore not likely a malicious link...)
             if domain == "tower.services.biocommons.org.au":
+                print("Found login URL: " + url)
                 return url
 
     else:
         return None
 
+def send_slack_message(message):
+    try:
+        print("Sending Slack message:")
+        print(message)
+        response = client.chat_postMessage(channel='#kookaburra-ops', text=message)
+        assert response["message"]["text"] == message
+    except SlackApiError as e:
+        # You will get a SlackApiError if "ok" is False
+        assert e.response["ok"] is False
+        assert e.response["error"]  # str like 'invalid_auth', 'channel_not_found'
+        print(f"Got an error: {e.response['error']}")
+
 def test_login():
     """This function tests the login in the following steps:
     1. Open tower.services.biocommons.org.au
     2. Trigger login for email address <kookaburramon@pawsey.org.au>
-    3. Check for email usingn <check_mail()>
+    3. Check for email using <check_mail()>
     4. Login with the link provided by check_mail()
     """
 
     try:
+        global client
+        #Step 0
+        # Login to Slack
+        slack_token = open('external/slacktoken').readline().strip()
+        client = WebClient(token=slack_token)
         #Step 1
+        print("Opening web browser to main Tower page")
         browser = Firefox()
         browser.get(f"https://tower.services.biocommons.org.au")
         sleep(3)
+        print("Attempting to login")
         email_box = browser.find_element(By.ID,"email")
         email_box.send_keys("kookaburramon@pawsey.org.au")
         submit_button = browser.find_element(By.CSS_SELECTOR,"button.btn-signin")
         submit_button.click()
+        # Wait for the page to load
+        sleep(2)
         success_div = browser.find_element(By.CSS_SELECTOR, "div.alert-success")
 
         #Step 2
-        # Wait for the email to be received (TODO: Smarter wait?)
+        # Wait before attempting to check email, then check email every 4 seconds until we find our URL.
         sleep(4)
-        # Check for the new email and save it as login_url
-        login_url = check_email()
-        print(login_url)
-        # If we have a valid login URL, navigate to it using Selenium
-        browser.get(login_url)
+        login_found = False
+        # Attempt to find the login URL up to times_to_try times, then send a Slack error message.
+        # Create login attempt counter
+        login_attempt = 0
+        times_to_try = 10
+        while not login_found:
+            if login_attempt < times_to_try:
+                # We haven't exhausted our attempts yet, try logging in
+                # Check for the new email and save it as login_url
+                login_url = check_email()
+                if login_url:
+                    # If we have a valid login URL, navigate to it using Selenium
+                    login_found = True
+                    print("Logging in by visiting the login URL")
+                    browser.get(login_url)
+                else:
+                    print("Login URL not found yet, trying again...")
+                    sleep(4)
+                    login_attempt += 1
+            else:
+                print("We didn't find a login URL after " + str(times_to_try) + " times, bailing.")
+                sys.exit("ERR_NO_EMAIL")
+
         # Step 3
+        # Check for status code. TODO: Do this properly!
+        status_code = "403"
+        error = "Example error"
+        # Post the status code and message to Slack
+        send_slack_message(status_code + " " + error)
 
     except Exception as e:
-        #Todo: alert!
-        # post this to slack
-
+        # Detect stack trace and save it
         stack_trace = traceback.format_exc()
 
-        pass
+        # Post stack_trace to Slack
+        send_slack_message("Something's wrong, got stack trace" + stack_trace)
 
 # Trigger a login via a remote controlled Firefox
 test_login()
