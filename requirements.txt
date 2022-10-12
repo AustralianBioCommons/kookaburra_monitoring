@@ -1,2 +1,3 @@
 selenium
+selenium-wire
 slack-sdk

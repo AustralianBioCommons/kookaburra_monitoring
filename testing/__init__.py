@@ -1,6 +1,7 @@
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import *
 from selenium.webdriver import *
+from seleniumwire import webdriver
 import imaplib
 import email
 from datetime import date,datetime,timedelta
@@ -11,10 +12,13 @@ import traceback
 from time import sleep
 import re
 import sys
+import json
 from email import message_from_bytes
 from email.policy import default
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
+
+
 def check_email() -> Optional[str]:
     """
     This function checks the email folder and returns the
@@ -87,16 +91,18 @@ def check_email() -> Optional[str]:
             if domain == "tower.services.biocommons.org.au":
                 print("Found login URL: " + url)
                 return url
-
     else:
         return None
 
-def send_slack_message(message):
+def send_slack_message(message, screenshot = None):
     try:
         print("Sending Slack message:")
         print(message)
         response = client.chat_postMessage(channel='#kookaburra-ops', text=message)
         assert response["message"]["text"] == message
+
+        if screenshot:
+            response = client.files_upload(channels=['#kookaburra-ops'],filename='screenshot.png',file=screenshot)
     except SlackApiError as e:
         # You will get a SlackApiError if "ok" is False
         assert e.response["ok"] is False
@@ -154,22 +160,24 @@ def test_login():
                     sleep(4)
                     login_attempt += 1
             else:
-                print("We didn't find a login URL after " + str(times_to_try) + " times, bailing.")
+                print(f"We didn't find a login URL after {times_to_try} times, bailing.")
                 sys.exit("ERR_NO_EMAIL")
 
         # Step 3
-        # Check for status code. TODO: Do this properly!
-        status_code = "403"
-        error = "Example error"
+        # Check for status code
+        driver = webdriver.Firefox()
+        driver.get(login_url)
+        the_mother_request = list(filter(lambda x: x.url == login_url,driver.requests))[0]
+        status_code = the_mother_request.response.status_code
         # Post the status code and message to Slack
-        send_slack_message(status_code + " " + error)
+        if status_code != 200:
+            sleep(5)
+            screen_png = driver.get_screenshot_as_png()
+            send_slack_message(f"""The login returned non 200 status code of "{status_code}" """,screen_png)
 
     except Exception as e:
-        # Detect stack trace and save it
-        stack_trace = traceback.format_exc()
-
         # Post stack_trace to Slack
-        send_slack_message("Something's wrong, got stack trace" + stack_trace)
+        send_slack_message(f"Something's wrong, got stack trace {traceback.format_exc()}")
 
 # Trigger a login via a remote controlled Firefox
 test_login()
