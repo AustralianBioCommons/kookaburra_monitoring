@@ -125,17 +125,17 @@ def test_login():
         client = WebClient(token=slack_token)
         #Step 1
         print("Opening web browser to main Tower page")
-        browser = Firefox()
-        browser.get(f"https://tower.services.biocommons.org.au")
+        driver = webdriver.Firefox()
+        driver.get(f"https://tower.services.biocommons.org.au")
         sleep(3)
         print("Attempting to login")
-        email_box = browser.find_element(By.ID,"email")
+        email_box = driver.find_element(By.ID,"email")
         email_box.send_keys("kookaburramon@pawsey.org.au")
-        submit_button = browser.find_element(By.CSS_SELECTOR,"button.btn-signin")
+        submit_button = driver.find_element(By.CSS_SELECTOR,"button.btn-signin")
         submit_button.click()
         # Wait for the page to load
         sleep(2)
-        success_div = browser.find_element(By.CSS_SELECTOR, "div.alert-success")
+        success_div = driver.find_element(By.CSS_SELECTOR, "div.alert-success")
 
         #Step 2
         # Wait before attempting to check email, then check email every 4 seconds until we find our URL.
@@ -154,7 +154,7 @@ def test_login():
                     # If we have a valid login URL, navigate to it using Selenium
                     login_found = True
                     print("Logging in by visiting the login URL")
-                    browser.get(login_url)
+                    driver.get(login_url)
                 else:
                     print("Login URL not found yet, trying again...")
                     sleep(4)
@@ -165,19 +165,25 @@ def test_login():
 
         # Step 3
         # Check for status code
-        driver = webdriver.Firefox()
         driver.get(login_url)
-        the_mother_request = list(filter(lambda x: x.url == login_url,driver.requests))[0]
-        status_code = the_mother_request.response.status_code
+        # Filter for status code for only the login_url page
+        login_url_request = list(filter(lambda x: x.url == login_url,driver.requests))[0]
+        status_code = login_url_request.response.status_code
         # Post the status code and message to Slack
         if status_code != 200:
             sleep(5)
             screen_png = driver.get_screenshot_as_png()
             send_slack_message(f"""The login returned non 200 status code of "{status_code}" """,screen_png)
 
+        # Close browser and quit Firefox
+        driver.close()
+        driver.quit()
+
     except Exception as e:
         # Post stack_trace to Slack
         send_slack_message(f"Something's wrong, got stack trace {traceback.format_exc()}")
 
+
 # Trigger a login via a remote controlled Firefox
-test_login()
+if __name__ == "__main__":
+    test_login()
