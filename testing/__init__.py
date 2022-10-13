@@ -2,6 +2,7 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import *
 from selenium.webdriver import *
 from selenium.webdriver.firefox.options import Options
+from pyvirtualdisplay import Display
 from seleniumwire import webdriver
 import imaplib
 import email
@@ -31,7 +32,7 @@ def check_email() -> Optional[str]:
 
     imap_host = 'mail-server.pawsey.org.au'
     imap_user = 'kookaburramon'
-    imap_pass = open('external/password').readline().strip()
+    imap_pass = open('/home/ubuntu/kookaburra_monitoring/external/password').readline().strip()
     imap = imaplib.IMAP4_SSL(imap_host)
 
     # Assign variable for today's date
@@ -122,13 +123,13 @@ def test_login():
         global client
         #Step 0
         # Login to Slack
-        slack_token = open('external/slacktoken').readline().strip()
+        slack_token = open('/home/ubuntu/kookaburra_monitoring/external/slacktoken').readline().strip()
         client = WebClient(token=slack_token)
         #Step 1
         print("Opening web browser to main Tower page")
-        options = Options()
-        options.add_argument('--headless')
-        driver = webdriver.Firefox(options=options)
+        display = Display(visible=0, size=(800, 600))
+        display.start()
+        driver = webdriver.Firefox()
         driver.get(f"https://tower.services.biocommons.org.au")
         sleep(3)
         print("Attempting to login")
@@ -186,6 +187,8 @@ def test_login():
         # Post stack_trace to Slack
         send_slack_message(f"Something's wrong, got stack trace {traceback.format_exc()}")
 
+    finally:
+        display.stop()
 
 # Trigger a login via a remote controlled Firefox
 if __name__ == "__main__":
