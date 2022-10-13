@@ -1,6 +1,7 @@
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import *
 from selenium.webdriver import *
+from selenium.webdriver.firefox.options import Options
 from seleniumwire import webdriver
 import imaplib
 import email
@@ -125,7 +126,9 @@ def test_login():
         client = WebClient(token=slack_token)
         #Step 1
         print("Opening web browser to main Tower page")
-        driver = webdriver.Firefox()
+        options = Options()
+        options.add_argument('--headless')
+        driver = webdriver.Firefox(options=options)
         driver.get(f"https://tower.services.biocommons.org.au")
         sleep(3)
         print("Attempting to login")
@@ -170,7 +173,7 @@ def test_login():
         login_url_request = list(filter(lambda x: x.url == login_url,driver.requests))[0]
         status_code = login_url_request.response.status_code
         # Post the status code and message to Slack
-        if status_code != 200:
+        if status_code != 8000:
             sleep(5)
             screen_png = driver.get_screenshot_as_png()
             send_slack_message(f"""The login returned non 200 status code of "{status_code}" """,screen_png)
