@@ -185,7 +185,12 @@ def test_login():
 
     except Exception as e:
         # Post stack_trace to Slack
-        send_slack_message(f"Something's wrong, got stack trace {traceback.format_exc()}")
+        try:
+            screen_png = driver.get_screenshot_as_png()
+        except e:
+            screen_png = None
+
+        send_slack_message(f"Something's wrong, got stack trace {traceback.format_exc()}",screen_png)
 
     finally:
         display.stop()
