@@ -52,32 +52,38 @@ def check_email() -> Optional[str]:
 
     # Create an empty list to hold emails
     recent_received_emails = []
-    for num in messages[0].split():
-        tmp, data = imap.fetch(num, '(RFC822)')
-        for response in data:
-            if isinstance(response, tuple):
-                msg = email.message_from_bytes(response[1])
-                dates = decode_header(msg["Date"])[0][0]
-                email_received_time = datetime.strptime(dates, '%a, %d %b %Y %H:%M:%S %z (%Z)')
-                current_time = datetime.now(email_received_time.tzinfo)
-                # Calculate the earliest the email could have been received in order to be "within last 10 minutes"
-                min_received_time = current_time - timedelta(minutes=10)
-                # If the email received time occurs after that calculated time, it was received in the chosen period.
-                if email_received_time > min_received_time:
-                    # Email was in our chosen time period, so add it to the list
-                    if msg.is_multipart():
-                        for part in msg.walk():
-                            ctype = part.get_content_type()
-                            cdispo = str(part.get('Content-Disposition'))
+    try:
+        for num in messages[0].split():
+            tmp, data = imap.fetch(num, '(RFC822)')
+            for response in data:
+                if isinstance(response, tuple):
+                    msg = email.message_from_bytes(response[1])
+                    dates = decode_header(msg["Date"])[0][0]
+                    email_received_time = datetime.strptime(dates, '%a, %d %b %Y %H:%M:%S %z (%Z)')
+                    current_time = datetime.now(email_received_time.tzinfo)
+                    # Calculate the earliest the email could have been received in order to be "within last 10 minutes"
+                    min_received_time = current_time - timedelta(minutes=10)
+                    # If the email received time occurs after that calculated time, it was received in the chosen period.
+                    if email_received_time > min_received_time:
+                        # Email was in our chosen time period, so add it to the list
+                        if msg.is_multipart():
+                            for part in msg.walk():
+                                ctype = part.get_content_type()
+                                cdispo = str(part.get('Content-Disposition'))
 
-                            # skip any text/plain (txt) attachments
-                            if ctype == 'text/plain' and 'attachment' not in cdispo:
-                                body = part.get_payload(decode=True)  # decode
-                                break
-                    else:
-                        print("Something weird has happened with the email received")
-                        return None
-                    recent_received_emails.append(body)
+                                # skip any text/plain (txt) attachments
+                                if ctype == 'text/plain' and 'attachment' not in cdispo:
+                                    body = part.get_payload(decode=True)  # decode
+                                    break
+                        else:
+                            print("Something weird has happened with the email received")
+                            return None
+                        recent_received_emails.append(body)
+    finally:
+        for num in messages[0].split():
+            imap.store(num, '+FLAGS', '\\Deleted')
+            imap.expunge()
+
 
     # Check if list is empty
     if recent_received_emails:
