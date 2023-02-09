@@ -133,7 +133,7 @@ def test_login():
         driver.get(f"https://tower.services.biocommons.org.au")
         sleep(3)
         print("Attempting to login")
-        email_box = driver.find_element(By.ID,"email")
+        email_box = driver.find_element(By.TAG_NAME,"input")
         email_box.send_keys("kookaburramon@pawsey.org.au")
         submit_button = driver.find_element(By.CSS_SELECTOR,"button.btn-signin")
         submit_button.click()
