@@ -174,7 +174,7 @@ def test_login():
         login_url_request = list(filter(lambda x: x.url == login_url,driver.requests))[0]
         status_code = login_url_request.response.status_code
         # Post the status code and message to Slack
-        if status_code != 8000:
+        if status_code != 200:
             sleep(5)
             screen_png = driver.get_screenshot_as_png()
             send_slack_message(f"""The login returned non 200 status code of "{status_code}" """,screen_png)
