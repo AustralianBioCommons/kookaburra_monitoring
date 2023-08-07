@@ -146,6 +146,7 @@ def test_login():
         print("Opening web browser to main Tower page")
         display = Display(visible=0, size=(800, 600))
         display.start()
+        driver = None
         driver = webdriver.Firefox()
         driver.get(f"https://tower.services.biocommons.org.au")
         sleep(3)
