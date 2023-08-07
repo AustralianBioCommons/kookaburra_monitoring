@@ -145,7 +145,7 @@ def test_login():
         display.start()
 
         if '-heartbeat' in sys.argv:
-            send_slack_message('Alive')
+            send_slack_message('Tower Service Monitoring Heartbeat')
             return
 
         driver = None
