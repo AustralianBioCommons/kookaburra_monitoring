@@ -139,13 +139,15 @@ def test_login():
         # Login to Slack
         slack_token = open('/home/ubuntu/kookaburra_monitoring/external/slacktoken').readline().strip()
         client = WebClient(token=slack_token)
-        if '-heartbeat' in sys.argv:
-            send_slack_message('Alive')
-            return
         #Step 1
         print("Opening web browser to main Tower page")
         display = Display(visible=0, size=(800, 600))
         display.start()
+
+        if '-heartbeat' in sys.argv:
+            send_slack_message('Alive')
+            return
+
         driver = None
         driver = webdriver.Firefox()
         driver.get(f"https://tower.services.biocommons.org.au")
