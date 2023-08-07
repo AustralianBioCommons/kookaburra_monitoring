@@ -19,6 +19,8 @@ from email import message_from_bytes
 from email.policy import default
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 
 def check_email() -> Optional[str]:
@@ -107,15 +109,21 @@ def send_slack_message(message, screenshot = None):
         print("Sending Slack message:")
         print(message)
         response = client.chat_postMessage(channel='#kookaburra-ops', text=message)
-        assert response["message"]["text"] == message
 
         if screenshot:
             response = client.files_upload(channels=['#kookaburra-ops'],filename='screenshot.png',file=screenshot)
+            print(response)
     except SlackApiError as e:
         # You will get a SlackApiError if "ok" is False
         assert e.response["ok"] is False
         assert e.response["error"]  # str like 'invalid_auth', 'channel_not_found'
         print(f"Got an error: {e.response['error']}")
+
+def take_screenshot(driver):
+    try:
+        return driver.get_screenshot_as_png()
+    except:
+        return None
 
 def test_login():
     """This function tests the login in the following steps:
@@ -145,7 +153,7 @@ def test_login():
         submit_button.click()
         # Wait for the page to load
         sleep(2)
-        success_div = driver.find_element(By.CSS_SELECTOR, "div.alert-success")
+        success_div = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.alert-success")))
 
         #Step 2
         # Wait before attempting to check email, then check email every 4 seconds until we find our URL.
@@ -183,20 +191,30 @@ def test_login():
         if status_code != 200:
             sleep(5)
             screen_png = driver.get_screenshot_as_png()
+            print(screen_png)
             send_slack_message(f"""The login returned non 200 status code of "{status_code}" """,screen_png)
 
         # Close browser and quit Firefox
         driver.close()
         driver.quit()
 
+
+    except NoSuchElementException:
+        error_message = "One of the required elements was not found on the page."
+        screen_png = take_screenshot(driver)
+        send_slack_message(error_message, screen_png)
+        driver.quit()
+
+    except TimeoutException:
+        error_message = "The operation timed out before the required element was found."
+        screen_png = take_screenshot(driver)
+        send_slack_message(error_message,screen_png)
+        driver.quit()
+
     except Exception as e:
         # Post stack_trace to Slack
-        try:
-            screen_png = driver.get_screenshot_as_png()
-        except e:
-            screen_png = None
-
-        send_slack_message(f"Something's wrong, got stack trace {traceback.format_exc()}",screen_png)
+        screen_png = take_screenshot(driver)
+        send_slack_message(f"Something's wrong, got stack trace {traceback.format_exc()}", screen_png)
 
     finally:
         display.stop()
